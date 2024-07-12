@@ -1,2 +1,2 @@
-# Rosis-s_portfolio
+# Rosie's_portfolio
 Analytics Portfolio
