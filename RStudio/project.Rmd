@@ -1,0 +1,181 @@
+---
+title: "Final Project"
+subtitle: "STAE04 - Statistics: Data Visualisation"
+author: "Thi Kim Hong Nguyen"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+# Understanding Boston Housing Dataset
+
+In this project, I am choosing Boston Dataset from the MASS package in R, which contains information collected from the U.S. Census about housing values in the Boston area from 1978. The dataframe BostonHousing contains the original data by Harrison and Rubinfeld (1979) Hedonic prices and the demand for clean air. J. Environ. Economics and Management. The Boston data set contains 506 observations (neighborhoods around Boston) and 14 variables, which can be used to explore various aspects of the city’s housing market. Each observation represents a different town or area in the Boston region, and for each town, various features (or variables) are recorded. These features include information such as crime rate, proportion of residential land zoned for different purposes, air quality measures, proximity to employment centers, tax rates, and demographic characteristics of the population, among others.Therefore, in the context of the Boston data set, an "observation" refers to a specific geographic area or town for which data on the various features have been recorded. There are 506 such towns or areas represented in this data set. In order to view the Boston data set, we must load the MASS package and take a glimpse of the data.
+
+```{r setup, include=FALSE}
+# Setup options for R Markdown
+knitr::opts_chunk$set(
+  echo       = FALSE,    # Do not print the code
+  warning    = FALSE,    # Suppress warnings
+  message    = FALSE,    # Suppress messages
+  fig.align  = "center", # Center figures
+  fig.width  = 2.7,      # Good standard figure width for single-panel figures
+  fig.height = 2.4       # Good standard figure height for single-panel figures
+)
+# Set options
+options(
+  digits = 3, # limit the number of significant digits
+  width  = 63 # limit the width of code output
+)
+library(tidyverse)
+```
+
+```{r, echo = FALSE}
+library(MASS)
+data(Boston)
+glimpse(Boston)
+
+```
+
+The variables can be described as follows:
+
+```{r table1, echo = FALSE}
+attribute_info <- data.frame(
+  Attribute = c("crim", "zn", "indus",
+                "chas", "nox", "rm","age","dis","rad","tax","ptratio","black","lstat","medv"),
+    Description = c("per capita crime rate by town","proportion of residential land zoned for lots over 25,000 sq.ft.",
+                  "proportion of non-retail business acres per town",
+                  "Charles River dummy variable (= 1 if tract bounds river; 0
+          otherwise).",
+                  "nitrogen oxides concentration (parts per 10 million)",
+                  "average number of rooms per  per town",
+                  "proportion of owner-occupied units built prior to 1940",
+                  "weighted mean of distances to five Boston employment
+          centres",
+                  "index of accessibility to radial highways",
+                  "full-value property-tax rate per $10,000",
+                  "pupil-teacher ratio by town",
+                  "1000(Bk - 0.63)^2 where Bk is the proportion of blacks by
+          town.",
+                  "lower status of the population (percent)",
+                  "median value of owner-occupied homes in $1000s")
+)
+knitr::kable(attribute_info, caption = "The variables of the data set")
+```
+
+# Cleaning and Visualizing the dataset
+
+As we can see from the output, there are no missing or duplicated values in the Boston dataset. 
+
+```{r table2, echo = FALSE }
+missing_values <- sum(is.na(Boston))
+cat("Missing values: " , missing_values)
+colSums(is.na(Boston))
+
+```
+First, we create a heat map to examine the correlation between variables in the Boston data set. The plot(Figure 1) clearly illustrates the correlation between variables, with red indicating negative correlation, white representing no correlation, and green indicating positive correlation. Various shades of colors are employed to depict different levels of correlation, where darker shades of green signify a stronger positive correlation, and darker shades of red signify a stronger negative correlation. From the plot, it can be inferred that the variables DIS and NOX exhibit a robust negative correlation, while the variables TAX and RAD display a pronounced positive correlation. medv decreases with increase in crim (medium), indus (High),nox(low),age(low),rad(low),tax(low),ptratio(high), lstat (High) and increases with increase in zn(low),rm(High).
+
+```{r plot1, echo = FALSE, fig.cap = "Correlation Heatmap Between Variables", fig.width = 12, fig.height = 6}
+
+# Install and load necessary packages
+options(repos = 'https://cran.r-project.org')
+install.packages("ggcorrplot")
+library(ggcorrplot)
+
+# Calculate the correlation matrix
+correlation_matrix <- cor(Boston)
+
+# Create the correlation plot using ggcorrplot
+ggcorrplot(correlation_matrix, hc.order = TRUE, lab = TRUE)
+
+```
+
+
+Now We can create a similar histogram of average number of rooms per dwelling per town (Figure 2).
+
+```{r plot2, echo = FALSE, fig.cap = "The distribution of the average number of rooms per dwelling per town in the Boston in 1978.", fig.width = 6, fig.height = 4}
+
+# Plot a histogram using ggplot2
+ggplot(Boston, aes(x = rm)) +
+geom_histogram(binwidth = 0.5, fill = "skyblue", color = "black") +
+  labs(x = "Average Number of Rooms per Dwelling per town",
+       y = "Frequency") 
+```
+Then, I create a scatter plot to visualize the relationship between age and median home value. The plot reveals that, for most houses, there is a tendency for the value of owner-occupied houses to decrease as the age of the house increases. However, there is also a small proportion of houses where the price increases with age (Figure 3).
+
+```{r plot3, echo = FALSE, fig.cap = "Relationship between Age and Median Home Value", fig.width = 6, fig.height = 4}
+
+ggplot(Boston, aes(x = age, y = medv)) +
+geom_point(color = "blue") +
+labs(x = "AGE", y = "Median value of owner-occupied homes in $1000s") 
+
+```
+# Fitting a Linear Regression Model
+
+Firstly, I will split the data into training and testing sets using the sample.split function from the caTools package. This step is crucial for evaluation model performance, preventing over-fitting, tuning model parameters and maintain data integrity. In this case, I split the data with 75% of the data allocated to the training set and 25% to the testing set. We do this to assess the model’s performance on unseen data.
+
+```{r, echo = FALSE}
+# Install the caTools package if it's not already installed
+install.packages("caTools")
+
+# Load the caTools package
+library(caTools)
+
+#set a seed 
+set.seed(123)
+
+#Split the data , `split()` assigns a booleans to a new column based on the SplitRatio specified. 
+split <- sample.split(Boston,SplitRatio =0.75)
+
+train <- subset(Boston,split==TRUE)
+test <- subset(Boston,split==FALSE)
+
+```
+
+Then, I build a linear regression model to predict the median value of owner-occupied home (medv) using the predictors "crim", "rm","tax", and "lstat" using the training data (train). It then prints a summary of the model's results, including coefficients, standard errors, t-values, and p-values. The multiple R-squared 0.682 indicates that about 68.2% of the variability in median home value is explained by the predictors (crime rate, average number of rooms, property tax and percent lower status of the population).
+
+```{r table 3, echo = FALSE}
+model <- lm(medv ~ crim + rm + tax + lstat , data = train)
+summary(model)
+```
+
+Let's visualize the linear regression model by plotting the residuals, which is the difference between the observed value of the dependent variable (median home value) and the predicted value.
+
+```{r plot4, echo = FALSE, fig.cap = "Residuals Distribution Plot", fig.width = 6, fig.height = 4}
+
+res <- residuals(model)
+# Convert residuals to a DataFrame 
+res <- as.data.frame(res)
+ggplot(res,aes(res)) +  geom_histogram(fill='blue',alpha=0.5) +
+ labs(x = "Residual Value in $1000s")
+```
+```{r plot5, echo = FALSE, fig.cap = "Residuals vs. Fitted Values Plot", fig.width = 6, fig.height = 4}
+plot(model, which = 1)
+```
+
+The residuals against fitted values plot (Figure 5) helps us evaluate the assumptions and performance of the linear regression model, providing valuable insights into the linearity of the relationship, the presence of heteroscedasticity, the identification of outliers and influential points, and the overall fit of the model to the data. Here we see that linearity is violated: there seems to be a quadratic relationship. Whether there is homoskedastic or not is less obvious: we will need to investigate more plots. There are several outliers, with residuals close to 30. 
+
+
+```{r plot6, echo = FALSE, fig.cap = "Actual vs Predicted Values", fig.width = 6, fig.height = 4}
+# Predict on testing dataset
+predictions <- predict(model, newdata = test)
+# Create a scatter plot of actual vs predicted values
+ggplot(data.frame(Actual = test$medv, Predicted = predictions), aes(x = Actual, y = Predicted)) +
+  geom_point(color = "blue") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +
+  labs(x = "Actual Values (in $1000s)", y = "Predicted Values (in $1000s)")
+```
+
+Finally, I will test the model by predicting on testing data set by creating a scatter plot comparing the predicted values to the actual values which each point represents one observation. And the dashed red line represents a perfect prediction where actual values equal predicted values. Points close to this line indicate accurate predictions, while points far from the line indicate errors in prediction. And then using Root Mean Square Error, which is a standardized measure of how off we were with predicted values to evaluate the model.
+
+```{r,  echo = FALSE}
+error <- test$medv-test$predicted.medv
+rmse <- sqrt(mean(error)^2)
+
+```
+
+
+In conclusion, this project has successfully performed a linear regression for predicting median house values in the Boston housing data set.. The Root Mean Square Error (RMSE) for our Model is 0.7602882 indicates that, on average, the predictions made by the model differ from the actual values by approximately $760.29 when considering median house values in $1000s. Lower values of RMSE indicate better performance of the model, as they signify smaller errors between predicted and actual values. Therefore, an RMSE of 0.7602882 suggests that the model is making reasonably accurate predictions, although the interpretation should consider the context of the data set and the specific requirements of the problem at hand.

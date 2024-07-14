@@ -1,0 +1,139 @@
+---
+title: "Assignment 3"
+subtitle: "STAE04 - Statistics: Data Visualisation"
+author: "Thi Kim Hong Nguyen"
+date: "`r Sys.Date()`"
+papersize: a4
+geometry: margin=4cm
+colorlinks: true
+output:
+  pdf_document:
+    number_sections: true
+---
+
+This Assignment will work with two variables at a time as well as categorical data.
+In this Assignment, we will examine wage data to identify potential factors contributing to the variability in earnings among individuals. The dataset utilized for this analysis is the Wages dataset sourced from the Ecdat package.
+
+```{r setup, include = FALSE}
+# Setup options for R Markdown
+knitr::opts_chunk$set(
+  echo       = FALSE,    # Do not print the code
+  warning    = FALSE,    # Suppress warnings
+  message    = FALSE,    # Suppress messages
+  fig.align  = "center", # Center figures
+  fig.width  = 2.7,      # Good standard figure width for single-panel figures
+  fig.height = 2.4       # Good standard figure height for single-panel figures
+)
+# Set options
+options(
+  digits = 3, # limit the number of significant digits
+  width  = 63 # limit the width of code output
+)
+
+library(tidyverse)
+
+```
+Then we will run the code to make the data set available in R and format the data set. This data set actually represents matched data: panel data from the years 1976 to 1982 and is organized such that every 7 consecutive observations belong to a separate individual. Here, we simply repeat each value of the vector 1:595 seven times, and store this new variable as id and add another variable called year, which is simply the vector 1976:1982 repeated 595 times.
+
+```{r, echo = FALSE}
+options(repos = c(CRAN = 'https://cran.rstudio.com/'))
+```
+
+
+```{r table1, echo = TRUE}
+install.packages("Ecdat")
+library(Ecdat)
+data(Wages)
+head(Wages)  #Let's take a look at the data set
+dim(Wages)  #Check data set's dimensions
+
+#formatting data set
+wages_formatted <-
+  Wages %>%
+  mutate(
+    id = as.factor(rep(1:595, each = 7)),
+    year = rep(1976:1982, times = 595)
+  )
+```
+
+# Task 1: Getting the Data
+
+I used the Wages dataset is part of the Ecdat package in R. The Wages dataset from the Ecdat package provides information on wages and various factors related to individual workers. It includes variables such as income, education, experience, and other relevant factors that can be used for the analysis of wage disparities and patterns among workers. The dataset is structured to facilitate research and exploration of the relationships between different variables and wages in the context of labor economics.
+
+From 1976 to 1982 a panel of 595 observations of individual workers were collected, annd organized such that every 7 consecutive observations belong to a separate individual.Therefore, there are 4165 observations in total with 12 Variables. 
+
+```{r, echo = TRUE}
+wages_formatted <- 
+mutate(wages_formatted, wage = exp(lwage)) #add wage variable as their original scale
+```
+I also added a new variable to the data set containing the wages at their original (non-transformed) scale, called wage. The description of variables data set are the following below:
+
+```{r table2, echo = FALSE}
+attribute_info <- data.frame(
+  Attribute = c("exp", "wks", "bluecol",
+                "ind", "south", "smsa",
+                "married", "sex", "union", "ed","black","lwage","id","year","wage"),
+    Description = c("years of full-time work experience","weeks worked",
+                  "blue collar?",
+                  "works in a manufacturing industry ?",
+                  "resides in the south ?",
+                  "resides in a standard metropolitan statistical are ?",
+                  "married ?",
+                  "a factor with levels (male,female)",
+                  "individual's wage set by a union contract ?",
+                  "years of education",
+                  "is the individual black ?","logarithm of wage",
+                  "id","year","wage per month")
+)
+knitr::kable(attribute_info, caption = "The variables of the data set")
+```
+First, let's examine how the wages of individuals in this data set have evolved.
+```{r plot1,echo = TRUE, fig.cap = "Individual Wages Over Years"}
+# Create a line plot connecting individuals over the years
+ggplot(wages_formatted, aes(x = year, y = wage)) +
+  geom_line(aes(group=id)) +
+  labs(x = "Year",
+       y = "Wage per Month")
+```
+Overall, wages show an increasing trend from 1976 to 1982, reflecting economic development. Nevertheless, certain individuals exhibit a notable decline in the period between 1978 and 1980, attributable to the global economic crisis.
+
+# Task 2: Exploring the Depths of the Data
+
+In this task, I will emulate the approach taken in the initial report and explore the hypothesis suggesting a positive correlation between longer education and higher wages. To facilitate data visualization, I will narrow down the data set to exclusively encompass observations from the year 1982.
+
+```{r plot2,echo = TRUE, fig.cap = "Individual Wages Over Years"}
+# Create a line plot connecting individuals over the years
+library(dplyr)
+wages_1982 <- wages_formatted %>% #filter observations only in 1982
+  filter(year == 1982)
+# Create a plot explores the relationship between years of education and wages
+ggplot(wages_1982, aes(as.ordered(ed),wage)) +
+  geom_boxplot() +
+  labs(x = "Years of Education", y = "Wages per month")
+```
+
+Now, We can actually see a slight improvement in wages per month over the years of education, at least in terms of the median values. The plot illustrates that an additional year of schooling produces a 10% wage gain. Notwithstanding, it should be noted that there is no significant difference in income between two years of consecutive experience.Furthermore, it does not account for the possible correlation of explanation variables with the individuals effects. The analysis can be skeptical due to it might not account for all relevant variable influencing wages such as job type, industry or geographical location. For example, we can consider into the outlines from above 10 years experience. There are some excellent individuals that have wages significant different from the average.
+
+# Task 3:
+
+In this task, we will examine the relationship between wage and other variables in the data set using wage_level with three categories ("Low", "Mid", "High") based on the wage values. First, take a look at the relationship between wage level and sex.
+
+```{r plot3,echo = TRUE, fig.cap = "Distribution Wages Between Male and Female 1976 -1982"}
+# Transform the wage variable into a categorical factor
+wages_with_levels <-
+  wages_formatted %>%
+  mutate(
+    wage_levels = cut(
+      wage,
+      c(0, 750, 1500, max(wage)),
+      labels = c("Low", "Mid", "High"),
+      ordered_result = TRUE
+    )
+  )
+#create bar plot between wage and gender
+ggplot(wages_with_levels, aes(sex, fill = wage_levels)) +
+  geom_bar(position = "fill") +
+  labs(y ="Proportion")
+```
+It is evident that men generally have higher salaries than women. A significant portion of men falls into either the low or high-wage categories, with approximately 20% having high wages. In contrast, there are no women with high salaries, and the majority of them earn lower wages. Parenthood is a contributing factor to the widening gender pay gap. Women between the ages of 25 and 44 who are mothers are less likely to participate in the labor force compared to their childless counterparts in the same age group. Furthermore, when employed, these mothers tend to work fewer hours per week. In contrast, fathers are more inclined to engage in the labor force and dedicate more hours per week to work compared to men without children at home.
+
